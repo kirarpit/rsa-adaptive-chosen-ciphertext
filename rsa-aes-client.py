@@ -20,7 +20,7 @@ args = parser.parse_args()
 # Defining Constants
 connCount = 0
 MESSAGE_LENGTH = 16
-message = "You get an A+ baby!"
+message = args.message
 AESKey = os.urandom(16)
 aes = AESCipher(AESKey)
 print "Using AES key " + ':'.join(x.encode('hex') for x in AESKey)
@@ -87,30 +87,11 @@ def getPayload(cipher):
 	payload += hashlib.sha256(AESKey).digest()
 	payload += aes.encrypt(message)
 	#print "Payload length: ",len(payload)
-
-	"""
-	file_ob = open('cipher.txt', "w")
-	file_ob.write(''.join(x.encode('hex') for x in payload))
-	file_ob.close()
-	"""
 	
 	return payload
 
 cipher = pkcs.encrypt(AESKey)
 print verifyPadding(getPayload(cipher))
-
-# Parsing Cipher
-"""
-file_ob = open('cipher.txt', "r")
-content = file_ob.read()
-
-cipher = content[:256].strip()
-cipher = long_to_bytes(int(cipher, 16), 128)
-
-encryptedMessage = content[256:].strip()
-encryptedMessage = long_to_bytes(int(encryptedMessage, 16))
-file_ob.close()
-"""
 
 def pkcs_conformant(c_param, s_param):
 	global connCount
@@ -118,7 +99,9 @@ def pkcs_conformant(c_param, s_param):
 	cipher = long_to_bytes((c_param * pow(s_param, e, n) % n), k)
 	return verifyPadding(getPayload(cipher))
 
-# Attack to obtain cipher
+print "Starting attack in 15 seconds..."
+time.sleep(15)
+# Attack to obtain cipher plaintext (i.e. padded AES)
 c_0 = bytes_to_long(cipher)
 set_m_old = {(B2, B3 - 1)}
 i = 1

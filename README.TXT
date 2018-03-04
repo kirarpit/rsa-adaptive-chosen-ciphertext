@@ -1,12 +1,8 @@
-
 ## FILES
 
-rsa-aes-client.py: The client that creates an encrypted message using RSA and
-AES and sends it to the server
+rsa-aes-client.py: The client that creates an encrypted message using RSA (PKCS1.5) and AES and sends it to the server
 
-rsa-aes-server.py: The server that listens for connections and recieves
-messages from the client and decrypts them and returns the same message (only
-all letters in upper case) to the client.
+rsa-aes-server.py: The server that listens for connections and recieves messages from the client and decrypts them and returns the same message (only all letters in upper case) to the client.
 
 aes.py: A class that implements AES encrption using python libraries.
 
@@ -27,4 +23,3 @@ sudo python rsa-aes-server.py -ip 127.0.0.1 -p 1000
 python rsa-aes-client.py -ip 127.0.0.1 -p 1000 --message "This is an example"
 
 =============================================
-
