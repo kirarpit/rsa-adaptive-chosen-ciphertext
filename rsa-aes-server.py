@@ -1,14 +1,33 @@
-# Written by Meisam Navaki, maintained by crandall@cs.unm.edu
-
 import Crypto
 import ast
 import os
 import argparse
 import socket
 import sys
+import hashlib
 from aes import *
 from rsa import *
 from Crypto.Util.number import *
+
+def checkIfValidPadding(rsa, cipher):
+    """
+    Check if the PKCS padding is valid or not
+    """
+    try:
+	AESEncrypted = cipher[:128]
+
+	PaddedAESKey = rsa.decrypt(AESEncrypted)
+	print "Padded length:", len(PaddedAESKey)
+
+	# Padding the front
+	PaddedAESKey = b"\x00" * (rsa.get_k() - len(PaddedAESKey)) + PaddedAESKey
+
+	if not PaddedAESKey.startswith(b'\x00\x02'):
+	    return False
+	
+	return True
+    except:
+        return False
 
 def getSessionKey(rsa, cipher):
     """
@@ -17,7 +36,10 @@ def getSessionKey(rsa, cipher):
     try:
         AESEncrypted = cipher[:128]
         AESKey = rsa.decrypt(AESEncrypted)
-        return AESKey[(len(AESKey)-16):]
+
+        sep = AESKey.find(b"\x00", 2)
+
+        return AESKey[sep+1:]
     except:
         return False
 
@@ -27,12 +49,23 @@ def myDecrypt(rsa, cipher):
     AES key encrypted by the public RSA key of the server + message encrypted by the AES key
     """
     try:
-        messageEncrypted = cipher[128:]
         AESKey = getSessionKey(rsa, cipher) 
         print "aes len: ", len(AESKey)
+
+	# check hash
+	if hashlib.sha256(AESKey).digest() == cipher[128:160]:
+		print "hash matched"
+	else:
+		return False
+	
         aes = AESCipher(AESKey)
-        print "AES ", bytes_to_long(aes.key)
-        return aes.decrypt(messageEncrypted)
+        print "AES:", bytes_to_long(aes.key)
+
+	messageEncrypted = cipher[160:]
+	print "encrypted message length", len(messageEncrypted)
+	message = aes.decrypt(messageEncrypted)
+
+        return message
     except:
         return False
 
@@ -56,8 +89,6 @@ sock.listen(10)
 
 rsa = RSACipher()
 
-file_ob = open('server.txt', "a")
-file_ob.write("started\n")
 while True:
     print >>sys.stderr, 'Waiting for a connection...' # Wait for a conneciton
     connection, client_address = sock.accept()
@@ -68,20 +99,19 @@ while True:
         cipher = connection.recv(1024)
         print("Message Received...")
 
-	file_ob.write("message received\n")
-        message = myDecrypt(rsa, cipher)
-	file_ob.write(message + "\n")
-        if message:
-	    file_ob.write("Successfully decrypted message" + message + "\n")
-            print "decrypted successfully!"
-            print message
-            aes = AESCipher(getSessionKey(rsa, cipher))
-            msg = aes.encrypt(message.upper())
-            connection.sendall(msg)
-        else:
-	    file_ob.write("coudln't decrypt" + "\n")
-            connection.sendall("Couldn't decrypt!")
-	file_ob.flush()
+	print "message length:", len(cipher)
+	if checkIfValidPadding(rsa, cipher):
+		message = myDecrypt(rsa, cipher)
+		if not message:
+			connection.sendall("Invalid Hash")
+			continue
+
+		print "decrypted successfully!"
+		print "Message Decrypted:", message
+		connection.sendall(message.upper())
+	else:
+		connection.sendall("Invalid Padding")
+
     finally:
         # Clean up the connection
         connection.close()
