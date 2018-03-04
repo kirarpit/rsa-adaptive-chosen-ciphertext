@@ -17,7 +17,7 @@ def checkIfValidPadding(rsa, cipher):
 	AESEncrypted = cipher[:128]
 
 	PaddedAESKey = rsa.decrypt(AESEncrypted)
-	print "Padded length:", len(PaddedAESKey)
+	#print "Padded length:", len(PaddedAESKey)
 
 	# Padding the front
 	PaddedAESKey = b"\x00" * (rsa.get_k() - len(PaddedAESKey)) + PaddedAESKey
@@ -36,6 +36,7 @@ def getSessionKey(rsa, cipher):
     try:
         AESEncrypted = cipher[:128]
         AESKey = rsa.decrypt(AESEncrypted)
+	AESKey = b"\x00" * (rsa.get_k() - len(AESKey)) + AESKey
 
         sep = AESKey.find(b"\x00", 2)
 
@@ -50,7 +51,7 @@ def myDecrypt(rsa, cipher):
     """
     try:
         AESKey = getSessionKey(rsa, cipher) 
-        print "aes len: ", len(AESKey)
+        #print "aes len: ", len(AESKey)
 
 	# check hash
 	if hashlib.sha256(AESKey).digest() == cipher[128:160]:
@@ -90,16 +91,16 @@ sock.listen(10)
 rsa = RSACipher()
 
 while True:
-    print >>sys.stderr, 'Waiting for a connection...' # Wait for a conneciton
+    #print >>sys.stderr, 'Waiting for a connection...' # Wait for a conneciton
     connection, client_address = sock.accept()
   
     try:
-        print >>sys.stderr, 'Connection from:', client_address
+        #print >>sys.stderr, 'Connection from:', client_address
         # Receive the data
         cipher = connection.recv(1024)
-        print("Message Received...")
+        #print("Message Received...")
 
-	print "message length:", len(cipher)
+	#print "message length:", len(cipher)
 	if checkIfValidPadding(rsa, cipher):
 		message = myDecrypt(rsa, cipher)
 		if not message:
